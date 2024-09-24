@@ -1,109 +1,20 @@
-import discord
-from discord.ext import commands
-import json
-import random
-import time
 import asyncio
-from datetime import timedelta, datetime
-import discord.utils
+import json
 import os
+import random
+import sys
+import time
+from datetime import timedelta
 
-# Bot token
-TOKEN = os.getenv("DISCORD_TOKEN")
+import discord
+import discord.utils
+from discord.ext import commands
+from dotenv import load_dotenv
+
+from language_service import swedish_quotes
+from utils import none_or_whitespace
 
 recent_quotes = []
-
-# List of random Swedish quotes
-swedish_quotes = [
-    "Lycka är inte något du hittar, det är något du skapar.",
-    "Det är aldrig för sent att ge upp det du är, för att bli det du kan bli.",
-    "Ju hårdare du arbetar, desto mer tur får du.",
-    "Ge aldrig upp, för det är just när allting verkar hopplöst som chansen dyker upp.",
-    "Det är bättre att försöka och misslyckas än att aldrig försöka alls.",
-    "Förändring är svårt i början, rörig i mitten, men vacker i slutet.",
-    "Du är starkare än du tror, modigare än du verkar, och smartare än du tror.",
-    "Varje dag är en ny början, ta en djup andetag och börja igen.",
-    "För att lyckas måste du tro att du kan.",
-    "Att följa sina drömmar är ett modigt val, men det är vägen till verklig lycka.",
-    "Det är våra val som visar vad vi verkligen är, mycket mer än våra förmågor.",
-    "Tiden läker inte alla sår, men den lär oss att leva med dem.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Tillåt inte din rädsla att styra ditt liv, låt ditt mod leda dig istället.",
-    "Det är aldrig för sent att börja om och skapa det liv du önskar.",
-    "Ibland måste du gå igenom det värsta för att nå det bästa.",
-    "Varje hinder är en möjlighet att växa och lära sig.",
-    "För att förändra ditt liv måste du först förändra dina tankar.",
-    "För att uppnå stora saker måste du våga ta stora risker.",
-    "Livet är för kort för att spendera det på att ångra sig, så lev utan ånger.",
-    "Det är aldrig för sent att bli den person du alltid velat vara.",
-    "Varje dag är en gåva, använd den klokt och gör det bästa av den.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "För att bli framgångsrik måste du tro på dig själv när ingen annan gör det.",
-    "Tillåt dig själv att växa och blomstra, även om det innebär att du måste kämpa.",
-    "Förändring är smärtsam, men ingenting är så smärtsamt som att stanna kvar där du inte hör hemma.",
-    "Ge aldrig upp på dina drömmar, även när det känns som om hela världen är emot dig.",
-    "Att leva ett liv utan ånger kräver mod, men det är värt det i slutändan.",
-    "Tiden går oavsett om du gör något med den eller inte, så varje dag är en möjlighet att göra det bästa av det.",
-    "För att växa måste du lämna din komfortzon och ta itu med det okända.",
-    "Ditt öde ligger i dina händer, så ta kontroll över det och forma det till det liv du önskar.",
-    "Livet är för kort för att spendera det på att vara olycklig, så gör det som gör dig lycklig.",
-    "Att leva i nuet är den bästa gåva du kan ge dig själv, så släpp taget om det förflutna och se framåt.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Förändring är oundviklig, så omfamna den och låt den leda dig mot nya möjligheter.",
-    "Att leva i nuet är det bästa sättet att uppskatta livet och allt det har att erbjuda.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Förändring är oundviklig, så omfamna den och låt den leda dig mot nya möjligheter.",
-    "Att leva i nuet är det bästa sättet att uppskatta livet och allt det har att erbjuda.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-]
 
 # Prefix for commands
 PREFIX = "/"
@@ -338,7 +249,7 @@ async def PB15(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 15S PB registrerat")
+        await ctx.send("Inget 15S PB registrerat")
 
 
 # Similarly define commands for NPB30 and PB30
@@ -368,7 +279,7 @@ async def PB30(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 30S PB registrerat")
+        await ctx.send("Inget 30S PB registrerat")
 
 
 # Command to store a number for NPB60
@@ -399,7 +310,7 @@ async def PB60(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 60S PB registrerat")
+        await ctx.send("Inget 60S PB registrerat")
 
 
 # Command to show all stored PBs for a user
@@ -435,7 +346,7 @@ async def PB(ctx):
             message += "60S = Inget registrerat"
         await ctx.send(message)
     else:
-        await ctx.send(f"Inga PB registrerade för dig")
+        await ctx.send("Inga PB registrerade för dig")
 
 
 # Command to show all available commands
@@ -464,5 +375,12 @@ async def TMR(ctx):
     await ctx.send(text)
 
 
-# Run the bot
-bot.run(TOKEN)
+if __name__ == "__main__":
+    load_dotenv(override=True)
+    TOKEN = os.getenv("DISCORD_TOKEN")
+
+    if none_or_whitespace(TOKEN):
+        print("Please set the 'DISCORD_TOKEN' environment variable.\n")
+        sys.exit(1)
+
+    bot.run(TOKEN)
