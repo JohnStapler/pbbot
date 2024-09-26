@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import json
 import os
@@ -15,6 +16,8 @@ from language_service import swedish_quotes
 from utils import none_or_whitespace
 
 recent_quotes = []
+sync_commands = False
+"""Prevent rate-limiting by only syncing commands when needed. Start with '--sync' to enable."""
 
 # Prefix for commands
 PREFIX = "/"
@@ -26,8 +29,8 @@ JSON_FILE = "numbers.json"
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
 
-@bot.command()
-async def LB(ctx):
+@bot.hybrid_command()
+async def lb(ctx):
     # Load numbers from JSON file
     numbers = load_numbers()
 
@@ -69,7 +72,7 @@ async def LB(ctx):
     await ctx.send(leaderboard_message)
 
 
-@bot.command(aliases=["test"])
+@bot.hybrid_command()
 # @commands.has_permissions(moderate_members=True)  # Kontrollera att botten har rättigheter att moderera användare
 async def typing_test(ctx):
     global recent_quotes
@@ -205,6 +208,13 @@ async def typing_test(ctx):
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
+    if sync_commands:
+        synced = await bot.tree.sync()
+        print(f"🔄 Synced {len(synced)} command(s)")
+    else:
+        print("💡 Syncing commands is disabled")
+        print("   To enable syncing, start with '--sync'")
+
 
 # Load numbers from JSON file
 def load_numbers():
@@ -222,8 +232,8 @@ def save_numbers(numbers):
 
 
 # Command to store a number
-@bot.command(aliases=["npb15"])
-async def NPB15(ctx, number: int):
+@bot.hybrid_command()
+async def nbp15(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -238,8 +248,8 @@ async def NPB15(ctx, number: int):
 
 
 # Command to retrieve stored number
-@bot.command(aliases=["pb15"])
-async def PB15(ctx):
+@bot.hybrid_command()
+async def pb15(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB15" in numbers[user_id]:
@@ -253,8 +263,8 @@ async def PB15(ctx):
 
 
 # Similarly define commands for NPB30 and PB30
-@bot.command(aliases=["npb30"])
-async def NPB30(ctx, number: int):
+@bot.hybrid_command()
+async def npb30(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -268,8 +278,8 @@ async def NPB30(ctx, number: int):
     await ctx.send(f"Nytt PB på 30S registrerat: {number} WPM")
 
 
-@bot.command(aliases=["pb30"])
-async def PB30(ctx):
+@bot.hybrid_command()
+async def pb30(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB30" in numbers[user_id]:
@@ -283,8 +293,8 @@ async def PB30(ctx):
 
 
 # Command to store a number for NPB60
-@bot.command(aliases=["npb60"])
-async def NPB60(ctx, number: int):
+@bot.hybrid_command()
+async def npb60(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -299,8 +309,8 @@ async def NPB60(ctx, number: int):
 
 
 # Command to retrieve stored number for PB60
-@bot.command(aliases=["pb60"])
-async def PB60(ctx):
+@bot.hybrid_command()
+async def pb60(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB60" in numbers[user_id]:
@@ -314,8 +324,8 @@ async def PB60(ctx):
 
 
 # Command to show all stored PBs for a user
-@bot.command(aliases=["pb"])
-async def PB(ctx):
+@bot.hybrid_command()
+async def pb(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers:
@@ -350,8 +360,8 @@ async def PB(ctx):
 
 
 # Command to show all available commands
-@bot.command(aliases=["Help"])
-async def Jelp(ctx):
+@bot.hybrid_command()
+async def jelp(ctx):
     commands_list = [
         "**/NPB15** - Registrerar ett nytt PB på 15S.",
         "**/PB15** - Visar ditt registrerade PB på 15S.",
@@ -369,15 +379,24 @@ async def Jelp(ctx):
     await ctx.send(help_message)
 
 
-@bot.command(aliases=["3MR", "3mr"])
-async def TMR(ctx):
+@bot.hybrid_command()
+async def tmr(ctx):
     text = "#3MR är kort för **treminutersregeln**. Det är regeln man kan tillämpa när man skriver hastighetstest för att få goda resultat oftare. Den går ut på att man tar en paus på tre minuter mellan varje test. Detta gör man för att återställa sinnestämningen men också för att få tillbaka energin."
     await ctx.send(text)
+
+
+def parse_arguments() -> dict:
+    parser = argparse.ArgumentParser(prog="PB Bot")
+    parser.add_argument("--sync", action="store_true")
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
     load_dotenv(override=True)
     TOKEN = os.getenv("DISCORD_TOKEN")
+
+    arguments = parse_arguments()
+    sync_commands = arguments.sync
 
     if none_or_whitespace(TOKEN):
         print("Please set the 'DISCORD_TOKEN' environment variable.\n")
