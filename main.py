@@ -72,7 +72,7 @@ async def lb(ctx):
     await ctx.send(leaderboard_message)
 
 
-@bot.hybrid_command()
+@bot.hybrid_command(description="Skriv ett hastighetstest så snabbt du bara kan!")
 # @commands.has_permissions(moderate_members=True)  # Kontrollera att botten har rättigheter att moderera användare
 async def test(ctx):
     global recent_quotes
