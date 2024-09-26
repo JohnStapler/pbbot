@@ -74,7 +74,7 @@ async def lb(ctx):
 
 @bot.hybrid_command()
 # @commands.has_permissions(moderate_members=True)  # Kontrollera att botten har rättigheter att moderera användare
-async def typing_test(ctx):
+async def test(ctx):
     global recent_quotes
     # Välj ett slumpmässigt citat som inte är i recent_quotes
     available_indices = [
@@ -363,16 +363,16 @@ async def pb(ctx):
 @bot.hybrid_command()
 async def jelp(ctx):
     commands_list = [
-        "**/NPB15** - Registrerar ett nytt PB på 15S.",
-        "**/PB15** - Visar ditt registrerade PB på 15S.",
-        "**/NPB30** - Registrerar ett nytt PB på 30S.",
-        "**/PB30** - Visar ditt registrerade PB på 30S.",
-        "**/NPB60** - Registrerar ett nytt PB på 60S.",
-        "**/PB60** - Visar ditt registrerade PB på 60S.",
-        "**/PB** - Visar alla dina registrerade PB.",
-        "**/3MR** - Förklarar vad treminutersregeln är.",
+        "**/npb15** - Registrerar ett nytt PB på 15S.",
+        "**/pb15** - Visar ditt registrerade PB på 15S.",
+        "**/npb30** - Registrerar ett nytt PB på 30S.",
+        "**/pb30** - Visar ditt registrerade PB på 30S.",
+        "**/npb60** - Registrerar ett nytt PB på 60S.",
+        "**/pb60** - Visar ditt registrerade PB på 60S.",
+        "**/pb** - Visar alla dina registrerade PB.",
+        "**/3mr** - Förklarar vad treminutersregeln är.",
         "**/test** - Skriv ett hastighetstest så snabbt du bara kan!",
-        "**/LB** - Visar top 10 snabbast skrivna quotes från /test",
+        "**/lb** - Visar top 10 snabbast skrivna quotes från /test",
     ]
     help_message = "Här är en lista över tillgängliga kommandon:\n\n"
     help_message += "\n".join(commands_list)
