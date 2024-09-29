@@ -1,109 +1,23 @@
-import discord
-from discord.ext import commands
-import json
-import random
-import time
+import argparse
 import asyncio
-from datetime import timedelta, datetime
-import discord.utils
+import json
 import os
+import random
+import sys
+import time
+from datetime import timedelta
 
-# Bot token
-TOKEN = os.getenv("DISCORD_TOKEN")
+import discord
+import discord.utils
+from discord.ext import commands
+from dotenv import load_dotenv
+
+from language_service import swedish_quotes
+from utils import none_or_whitespace
 
 recent_quotes = []
-
-# List of random Swedish quotes
-swedish_quotes = [
-    "Lycka är inte något du hittar, det är något du skapar.",
-    "Det är aldrig för sent att ge upp det du är, för att bli det du kan bli.",
-    "Ju hårdare du arbetar, desto mer tur får du.",
-    "Ge aldrig upp, för det är just när allting verkar hopplöst som chansen dyker upp.",
-    "Det är bättre att försöka och misslyckas än att aldrig försöka alls.",
-    "Förändring är svårt i början, rörig i mitten, men vacker i slutet.",
-    "Du är starkare än du tror, modigare än du verkar, och smartare än du tror.",
-    "Varje dag är en ny början, ta en djup andetag och börja igen.",
-    "För att lyckas måste du tro att du kan.",
-    "Att följa sina drömmar är ett modigt val, men det är vägen till verklig lycka.",
-    "Det är våra val som visar vad vi verkligen är, mycket mer än våra förmågor.",
-    "Tiden läker inte alla sår, men den lär oss att leva med dem.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Tillåt inte din rädsla att styra ditt liv, låt ditt mod leda dig istället.",
-    "Det är aldrig för sent att börja om och skapa det liv du önskar.",
-    "Ibland måste du gå igenom det värsta för att nå det bästa.",
-    "Varje hinder är en möjlighet att växa och lära sig.",
-    "För att förändra ditt liv måste du först förändra dina tankar.",
-    "För att uppnå stora saker måste du våga ta stora risker.",
-    "Livet är för kort för att spendera det på att ångra sig, så lev utan ånger.",
-    "Det är aldrig för sent att bli den person du alltid velat vara.",
-    "Varje dag är en gåva, använd den klokt och gör det bästa av den.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "För att bli framgångsrik måste du tro på dig själv när ingen annan gör det.",
-    "Tillåt dig själv att växa och blomstra, även om det innebär att du måste kämpa.",
-    "Förändring är smärtsam, men ingenting är så smärtsamt som att stanna kvar där du inte hör hemma.",
-    "Ge aldrig upp på dina drömmar, även när det känns som om hela världen är emot dig.",
-    "Att leva ett liv utan ånger kräver mod, men det är värt det i slutändan.",
-    "Tiden går oavsett om du gör något med den eller inte, så varje dag är en möjlighet att göra det bästa av det.",
-    "För att växa måste du lämna din komfortzon och ta itu med det okända.",
-    "Ditt öde ligger i dina händer, så ta kontroll över det och forma det till det liv du önskar.",
-    "Livet är för kort för att spendera det på att vara olycklig, så gör det som gör dig lycklig.",
-    "Att leva i nuet är den bästa gåva du kan ge dig själv, så släpp taget om det förflutna och se framåt.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Förändring är oundviklig, så omfamna den och låt den leda dig mot nya möjligheter.",
-    "Att leva i nuet är det bästa sättet att uppskatta livet och allt det har att erbjuda.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Förändring är oundviklig, så omfamna den och låt den leda dig mot nya möjligheter.",
-    "Att leva i nuet är det bästa sättet att uppskatta livet och allt det har att erbjuda.",
-    "Varje dag är en ny början, så släpp taget om det förflutna och fokusera på framtiden.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Ingenting i livet är en garanti, så varje dag är en gåva att uppskatta och njuta av.",
-    "Det är genom att följa ditt hjärta som du hittar verklig lycka och mening i livet.",
-    "Att leva ett liv utan ånger kräver mod, men det är också det mest givande.",
-    "Varje dag är en möjlighet att förändra ditt liv, så ta chansen och skapa det liv du önskar.",
-    "Att våga drömma stort är det första steget mot att uppnå stora saker.",
-    "Det är dina handlingar, inte dina ord, som definierar dig som person.",
-    "Ingenting kan hindra dig om du har modet att fortsätta framåt trots motgångar.",
-    "Att våga tro på dig själv är det första steget mot att uppnå dina drömmar.",
-    "Livet är en resa och bara du kan bestämma riktningen.",
-    "Det är bättre att ångra det du gjorde än att ångra det du inte gjorde.",
-    "Ingenting är omöjligt för den som tror att allt är möjligt.",
-    "Att följa dina drömmar kräver mod, men det är det som leder till verklig lycka och framgång.",
-    "Varje dag är en gåva, så var tacksam för det du har och uppskatta varje ögonblick.",
-]
+sync_commands = False
+"""Prevent rate-limiting by only syncing commands when needed. Start with '--sync' to enable."""
 
 # Prefix for commands
 PREFIX = "/"
@@ -115,8 +29,8 @@ JSON_FILE = "numbers.json"
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
 
-@bot.command()
-async def LB(ctx):
+@bot.hybrid_command()
+async def lb(ctx):
     # Load numbers from JSON file
     numbers = load_numbers()
 
@@ -158,9 +72,9 @@ async def LB(ctx):
     await ctx.send(leaderboard_message)
 
 
-@bot.command(aliases=["test"])
+@bot.hybrid_command(description="Skriv ett hastighetstest så snabbt du bara kan!")
 # @commands.has_permissions(moderate_members=True)  # Kontrollera att botten har rättigheter att moderera användare
-async def typing_test(ctx):
+async def test(ctx):
     global recent_quotes
     # Välj ett slumpmässigt citat som inte är i recent_quotes
     available_indices = [
@@ -294,6 +208,13 @@ async def typing_test(ctx):
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
+    if sync_commands:
+        synced = await bot.tree.sync()
+        print(f"🔄 Synced {len(synced)} command(s)")
+    else:
+        print("💡 Syncing commands is disabled")
+        print("   To enable syncing, start with '--sync'")
+
 
 # Load numbers from JSON file
 def load_numbers():
@@ -311,8 +232,8 @@ def save_numbers(numbers):
 
 
 # Command to store a number
-@bot.command(aliases=["npb15"])
-async def NPB15(ctx, number: int):
+@bot.hybrid_command()
+async def nbp15(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -327,8 +248,8 @@ async def NPB15(ctx, number: int):
 
 
 # Command to retrieve stored number
-@bot.command(aliases=["pb15"])
-async def PB15(ctx):
+@bot.hybrid_command()
+async def pb15(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB15" in numbers[user_id]:
@@ -338,12 +259,12 @@ async def PB15(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 15S PB registrerat")
+        await ctx.send("Inget 15S PB registrerat")
 
 
 # Similarly define commands for NPB30 and PB30
-@bot.command(aliases=["npb30"])
-async def NPB30(ctx, number: int):
+@bot.hybrid_command()
+async def npb30(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -357,8 +278,8 @@ async def NPB30(ctx, number: int):
     await ctx.send(f"Nytt PB på 30S registrerat: {number} WPM")
 
 
-@bot.command(aliases=["pb30"])
-async def PB30(ctx):
+@bot.hybrid_command()
+async def pb30(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB30" in numbers[user_id]:
@@ -368,12 +289,12 @@ async def PB30(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 30S PB registrerat")
+        await ctx.send("Inget 30S PB registrerat")
 
 
 # Command to store a number for NPB60
-@bot.command(aliases=["npb60"])
-async def NPB60(ctx, number: int):
+@bot.hybrid_command()
+async def npb60(ctx, number: int):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
@@ -388,8 +309,8 @@ async def NPB60(ctx, number: int):
 
 
 # Command to retrieve stored number for PB60
-@bot.command(aliases=["pb60"])
-async def PB60(ctx):
+@bot.hybrid_command()
+async def pb60(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers and "NPB60" in numbers[user_id]:
@@ -399,12 +320,12 @@ async def PB60(ctx):
             message += f'\nScreenshot: {pb["screenshot"]}'
         await ctx.send(message)
     else:
-        await ctx.send(f"Inget 60S PB registrerat")
+        await ctx.send("Inget 60S PB registrerat")
 
 
 # Command to show all stored PBs for a user
-@bot.command(aliases=["pb"])
-async def PB(ctx):
+@bot.hybrid_command()
+async def pb(ctx):
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id in numbers:
@@ -435,34 +356,50 @@ async def PB(ctx):
             message += "60S = Inget registrerat"
         await ctx.send(message)
     else:
-        await ctx.send(f"Inga PB registrerade för dig")
+        await ctx.send("Inga PB registrerade för dig")
 
 
 # Command to show all available commands
-@bot.command(aliases=["Help"])
-async def Jelp(ctx):
+@bot.hybrid_command()
+async def jelp(ctx):
     commands_list = [
-        "**/NPB15** - Registrerar ett nytt PB på 15S.",
-        "**/PB15** - Visar ditt registrerade PB på 15S.",
-        "**/NPB30** - Registrerar ett nytt PB på 30S.",
-        "**/PB30** - Visar ditt registrerade PB på 30S.",
-        "**/NPB60** - Registrerar ett nytt PB på 60S.",
-        "**/PB60** - Visar ditt registrerade PB på 60S.",
-        "**/PB** - Visar alla dina registrerade PB.",
-        "**/3MR** - Förklarar vad treminutersregeln är.",
+        "**/npb15** - Registrerar ett nytt PB på 15S.",
+        "**/pb15** - Visar ditt registrerade PB på 15S.",
+        "**/npb30** - Registrerar ett nytt PB på 30S.",
+        "**/pb30** - Visar ditt registrerade PB på 30S.",
+        "**/npb60** - Registrerar ett nytt PB på 60S.",
+        "**/pb60** - Visar ditt registrerade PB på 60S.",
+        "**/pb** - Visar alla dina registrerade PB.",
+        "**/3mr** - Förklarar vad treminutersregeln är.",
         "**/test** - Skriv ett hastighetstest så snabbt du bara kan!",
-        "**/LB** - Visar top 10 snabbast skrivna quotes från /test",
+        "**/lb** - Visar top 10 snabbast skrivna quotes från /test",
     ]
     help_message = "Här är en lista över tillgängliga kommandon:\n\n"
     help_message += "\n".join(commands_list)
     await ctx.send(help_message)
 
 
-@bot.command(aliases=["3MR", "3mr"])
-async def TMR(ctx):
+@bot.hybrid_command()
+async def tmr(ctx):
     text = "#3MR är kort för **treminutersregeln**. Det är regeln man kan tillämpa när man skriver hastighetstest för att få goda resultat oftare. Den går ut på att man tar en paus på tre minuter mellan varje test. Detta gör man för att återställa sinnestämningen men också för att få tillbaka energin."
     await ctx.send(text)
 
 
-# Run the bot
-bot.run(TOKEN)
+def parse_arguments() -> dict:
+    parser = argparse.ArgumentParser(prog="PB Bot")
+    parser.add_argument("--sync", action="store_true")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    load_dotenv(override=True)
+    TOKEN = os.getenv("DISCORD_TOKEN")
+
+    arguments = parse_arguments()
+    sync_commands = arguments.sync
+
+    if none_or_whitespace(TOKEN):
+        print("Please set the 'DISCORD_TOKEN' environment variable.\n")
+        sys.exit(1)
+
+    bot.run(TOKEN)
