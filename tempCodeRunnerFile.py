@@ -73,10 +73,13 @@ async def lb(ctx):
 
 
 @bot.hybrid_command(description="Skriv ett hastighetstest så snabbt du bara kan!")
+# @commands.has_permissions(moderate_members=True)  # Kontrollera att botten har rättigheter att moderera användare
 async def test(ctx):
     global recent_quotes
-
-    available_indices = [i for i in range(len(swedish_quotes)) if i not in recent_quotes]
+    # Välj ett slumpmässigt citat som inte är i recent_quotes
+    available_indices = [
+        i for i in range(len(swedish_quotes)) if i not in recent_quotes
+    ]
     if not available_indices:
         await ctx.send("Kan inte hitta fler unika citat att använda.")
         return
@@ -84,100 +87,121 @@ async def test(ctx):
     quote_index = random.choice(available_indices)
     quote = swedish_quotes[quote_index]
 
+    # Uppdatera listan med senast använda citat
     recent_quotes.append(quote_index)
     if len(recent_quotes) > 20:
-        recent_quotes.pop(0)
+        recent_quotes.pop(0)  # Ta bort det äldsta för att hålla listan till 20
 
-    if ctx.author.guild_permissions.administrator or ctx.author.top_role.position > ctx.guild.me.top_role.position:
+    # Kontrollera om användaren har administrativa rättigheter eller en högre roll
+    if (
+        ctx.author.guild_permissions.administrator
+        or ctx.author.top_role.position > ctx.guild.me.top_role.position
+    ):
         await ctx.send("Administratörer är undantagna från timeout under nedräkningen.")
     else:
+        # Timeout användaren under nedräkningen (3 sekunder)
         try:
-            # Increase timeout duration to 7 seconds to cover the countdown
-            timeout_until = discord.utils.utcnow() + timedelta(seconds=7)
-            await ctx.author.timeout(timeout_until)
+            timeout_until = discord.utils.utcnow() + timedelta(seconds=3)
+            await ctx.author.timeout(timeout_until)  # Timeout användaren i 3 sekunder
         except discord.Forbidden:
-            await ctx.send("Kunde inte tysta användaren. Kontrollera att boten har rätt behörigheter.")
+            await ctx.send(
+                "Kunde inte tysta användaren. Kontrollera att boten har rätt behörigheter och att den har en högre roll än användaren."
+            )
             return
         except discord.HTTPException:
             await ctx.send("Ett fel uppstod när användaren skulle tystas.")
             return
 
-    # Countdown sequence, starting from 5
-    embed = discord.Embed(title="5...", description=f"**{quote}**", color=0xFF0000)
+    # Skapa ett inbäddat meddelande för nedräkningen
+    embed = discord.Embed(
+        title="3...", description=f"**{quote}**", color=0xFF0000
+    )  # Röd för 3
     countdown_message = await ctx.send(embed=embed)
 
+    # Ändra nedräkningen till 2
     await asyncio.sleep(1)
-    embed.title = "4..."
-    embed.color = 0xFF4500  # Dark Orange
-    await countdown_message.edit(embed=embed)
-
-    await asyncio.sleep(1)
-    embed.title = "3..."
+    embed.title = "2..."
     embed.color = 0xFFA500  # Orange
     await countdown_message.edit(embed=embed)
 
-    await asyncio.sleep(1)
-    embed.title = "2..."
-    embed.color = 0xFFD700  # Gold
-    await countdown_message.edit(embed=embed)
-
+    # Ändra nedräkningen till 1
     await asyncio.sleep(1)
     embed.title = "1..."
-    embed.color = 0xFFFF00  # Yellow
+    embed.color = 0xFFFF00  # Gul
     await countdown_message.edit(embed=embed)
 
+    # Ändra till "... KÖR!" och starta testet
     await asyncio.sleep(1)
     embed.title = "... KÖR!"
-    embed.color = 0x00FF00  # Green
+    embed.color = 0x00FF00  # Grön
     await countdown_message.edit(embed=embed)
 
-    # Remove timeout after countdown
-    if not (ctx.author.guild_permissions.administrator or ctx.author.top_role.position > ctx.guild.me.top_role.position):
+    # Ta bort timeouten omedelbart när nedräkningen är över (om användaren var timeoutad)
+    if not (
+        ctx.author.guild_permissions.administrator
+        or ctx.author.top_role.position > ctx.guild.me.top_role.position
+    ):
         try:
             await ctx.author.timeout(None)
         except discord.Forbidden:
-            await ctx.send("Kunde inte återställa användarens skrivbehörighet.")
+            await ctx.send(
+                "Kunde inte återställa användarens skrivbehörighet. Kontrollera att boten har rätt behörigheter."
+            )
             return
         except discord.HTTPException:
             await ctx.send("Ett fel uppstod när skrivbehörigheten skulle återställas.")
             return
 
-    # Start test timing
+    # Starta tidtagningen direkt när "... KÖR!" visas
     start_time = time.time()
+
+    # Vänta på användarens inmatning efter "... KÖR!" visas
     try:
-        user_input = await bot.wait_for("message", check=lambda message: message.author == ctx.author, timeout=30)
+        user_input = await bot.wait_for(
+            "message", check=lambda message: message.author == ctx.author, timeout=30
+        )
     except asyncio.TimeoutError:
         await ctx.send("**Tiden är ute!** Försök igen.")
         return
 
+    # Stoppa tidtagningen direkt när användaren skickar sitt meddelande
     end_time = time.time()
 
-    # Calculate results and provide feedback
+    # Beräkna tiden det tog att skriva
     time_taken = end_time - start_time
+
+    # Dela upp användarens inmatning i ord och beräkna hastighet per ord
     user_words = user_input.content.split()
     quote_words = quote.split()
+
+    # Beräkna accuracy och WPM
     correct_words = sum(a == b for a, b in zip(user_words, quote_words))
     accuracy = correct_words / len(quote_words) * 100 if quote_words else 0
     words_typed = len(user_words)
     wpm = words_typed / (time_taken / 60)
 
+    # Skicka resultaten direkt efter att användaren trycker enter
     await ctx.send(f"Din accuracy är **{accuracy:.2f}%**.")
     await ctx.send(f"Din hastighet var **{wpm:.2f}** ord per minut.")
     await ctx.send(f"Det tog dig **{time_taken:.2f}** sekunder att skriva.")
 
-    # Save the test result if it's a new record
+    # Spara testresultatet om det är ett rekord
     user_id = str(ctx.author.id)
     numbers = load_numbers()
     if user_id not in numbers:
         numbers[user_id] = {}
 
-    if "last_test" not in numbers[user_id] or wpm > numbers[user_id]["last_test"]["number"]:
+    if (
+        "last_test" not in numbers[user_id]
+        or wpm > numbers[user_id]["last_test"]["number"]
+    ):
         numbers[user_id]["last_test"] = {"number": wpm, "quote": quote}
         save_numbers(numbers)
         await ctx.send("**Nytt testresultat sparades!**")
     else:
-        await ctx.send("Det här testresultatet var långsammare än ditt tidigare rekord och sparades inte.")
-
+        await ctx.send(
+            "Det här testresultatet var långsammare än ditt tidigare rekord och sparades inte."
+        )
 
 
 @bot.event
