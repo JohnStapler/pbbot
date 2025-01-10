@@ -78,9 +78,7 @@ async def lb(ctx):
 async def test(ctx):
     global recent_quotes
 
-    available_indices = [
-        i for i in range(len(swedish_quotes)) if i not in recent_quotes
-    ]
+    available_indices = [i for i in range(len(swedish_quotes)) if i not in recent_quotes]
     if not available_indices:
         await ctx.send("Kan inte hitta fler unika citat att använda.")
         return
@@ -92,10 +90,7 @@ async def test(ctx):
     if len(recent_quotes) > 20:
         recent_quotes.pop(0)
 
-    if (
-        ctx.author.guild_permissions.administrator
-        or ctx.author.top_role.position > ctx.guild.me.top_role.position
-    ):
+    if ctx.author.guild_permissions.administrator or ctx.author.top_role.position > ctx.guild.me.top_role.position:
         await ctx.send("Administratörer är undantagna från timeout under nedräkningen.")
     else:
         try:
@@ -103,9 +98,7 @@ async def test(ctx):
             timeout_until = discord.utils.utcnow() + timedelta(seconds=7)
             await ctx.author.timeout(timeout_until)
         except discord.Forbidden:
-            await ctx.send(
-                "Kunde inte tysta användaren. Kontrollera att boten har rätt behörigheter."
-            )
+            await ctx.send("Kunde inte tysta användaren. Kontrollera att boten har rätt behörigheter.")
             return
         except discord.HTTPException:
             await ctx.send("Ett fel uppstod när användaren skulle tystas.")
@@ -141,10 +134,7 @@ async def test(ctx):
     await countdown_message.edit(embed=embed)
 
     # Remove timeout after countdown
-    if not (
-        ctx.author.guild_permissions.administrator
-        or ctx.author.top_role.position > ctx.guild.me.top_role.position
-    ):
+    if not (ctx.author.guild_permissions.administrator or ctx.author.top_role.position > ctx.guild.me.top_role.position):
         try:
             await ctx.author.timeout(None)
         except discord.Forbidden:
@@ -157,9 +147,7 @@ async def test(ctx):
     # Start test timing
     start_time = time.time()
     try:
-        user_input = await bot.wait_for(
-            "message", check=lambda message: message.author == ctx.author, timeout=30
-        )
+        user_input = await bot.wait_for("message", check=lambda message: message.author == ctx.author, timeout=30)
     except asyncio.TimeoutError:
         await ctx.send("**Tiden är ute!** Försök igen.")
         return
@@ -185,17 +173,13 @@ async def test(ctx):
     if user_id not in numbers:
         numbers[user_id] = {}
 
-    if (
-        "last_test" not in numbers[user_id]
-        or wpm > numbers[user_id]["last_test"]["number"]
-    ):
+    if "last_test" not in numbers[user_id] or wpm > numbers[user_id]["last_test"]["number"]:
         numbers[user_id]["last_test"] = {"number": wpm, "quote": quote}
         save_numbers(numbers)
         await ctx.send("**Nytt testresultat sparades!**")
     else:
-        await ctx.send(
-            "Det här testresultatet var långsammare än ditt tidigare rekord och sparades inte."
-        )
+        await ctx.send("Det här testresultatet var långsammare än ditt tidigare rekord och sparades inte.")
+
 
 
 @bot.event
