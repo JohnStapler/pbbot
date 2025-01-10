@@ -1,11 +1,18 @@
-from discord.ext import commands
+import os
+
 from discord.ext.commands import Cog
 
 
 class NotifierCog(Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.target_user_id = int(os.getenv("AT_TARGET"))
 
-    @commands.hybrid_command(name="helloworld", description="View the item store")
-    async def helloworld(self, ctx: commands.Context):
-        await ctx.send("hello world")
+    @Cog.listener()
+    async def on_message(self, message):
+        if message.author == self.bot.user:
+            return
+
+        if self.target_user_id in [mention.id for mention in message.mentions]:
+            target_user = await self.bot.fetch_user(self.target_user_id)
+            await message.channel.send(target_user.mention)

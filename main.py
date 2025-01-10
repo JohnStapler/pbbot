@@ -12,6 +12,7 @@ import discord.utils
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from cogs.dev_cog import DevCog
 from cogs.notifier_cog import NotifierCog
 from language_service import swedish_quotes
 from utils import none_or_whitespace
@@ -404,10 +405,8 @@ async def main():
         print("Please set the 'DISCORD_TOKEN' environment variable.\n")
         sys.exit(1)
 
-    # Add cog inside an async function
+    await bot.add_cog(DevCog(bot))
     await bot.add_cog(NotifierCog(bot))
-
-    # Run the bot
     await bot.start(TOKEN)
 
 
