@@ -12,6 +12,8 @@ import discord.utils
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from cogs.dev_cog import DevCog
+from cogs.notifier_cog import NotifierCog
 from language_service import swedish_quotes
 from utils import none_or_whitespace
 
@@ -367,7 +369,8 @@ def parse_arguments() -> dict:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+async def main():
+    global sync_commands
     load_dotenv(override=True)
     TOKEN = os.getenv("DISCORD_TOKEN")
 
@@ -378,4 +381,10 @@ if __name__ == "__main__":
         print("Please set the 'DISCORD_TOKEN' environment variable.\n")
         sys.exit(1)
 
-    bot.run(TOKEN)
+    await bot.add_cog(DevCog(bot))
+    await bot.add_cog(NotifierCog(bot))
+    await bot.start(TOKEN)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
